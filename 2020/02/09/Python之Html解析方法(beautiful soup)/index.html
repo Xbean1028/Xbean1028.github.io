@@ -1,0 +1,124 @@
+<!DOCTYPE html><html lang="null"><head><meta name="generator" content="Hexo 3.9.0"><meta http-equiv="content-type" content="text/html; charset=utf-8"><meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0" name="viewport"><meta content="yes" name="apple-mobile-web-app-capable"><meta content="black-translucent" name="apple-mobile-web-app-status-bar-style"><meta content="telephone=no" name="format-detection"><meta name="description" content="Bean's blog"><meta name="keywords" content="xbean1028,software"><link rel="stylesheet" type="text/css" href="//fonts.loli.net/css?family=Source+Code+Pro"><link rel="stylesheet" type="text/css" href="/css/style-dark.css?v=2.0.4"><link rel="stylesheet" type="text/css" href="/css/highlight-dark.css?v=2.0.4"><link rel="Shortcut Icon" href="/favicon.ico"><link rel="bookmark" href="/favicon.ico"><link rel="apple-touch-icon" href="/apple-touch-icon.png"><link rel="apple-touch-icon-precomposed" href="/apple-touch-icon.png"><title>Python之Html解析方法(beautiful soup) | Bean Panda</title></head><body><div class="body_container"><div id="header"><div class="site-name"><h1 class="hidden">Python之Html解析方法(beautiful soup)</h1><a id="logo" href="/.">Bean Panda</a><p class="description">软件小白，江山点墨</p></div><div id="nav-menu"><a href="/." class="current"><i class="fa fa-home"> Start</i></a><a href="/archives/"><i class="fa fa-archive"> Archiv</i></a><a href="/about/"><i class="fa fa-user"> Über</i></a><a href="/atom.xml"><i class="fa fa-rss"> RSS</i></a></div><div id="search-form"><div id="result-mask" class="hide"></div><label><input id="search-key" type="text" autocomplete="off" placeholder="Suche"></label><div id="result-wrap" class="hide"><div id="search-result"></div></div><div class="hide"><template id="search-tpl"><div class="item"><a href="/{path}" title="{title}"><div class="title">{title}</div><div class="time">{date}</div><div class="tags">{tags}</div></a></div></template></div></div></div><div id="layout" class="layout-g"><div class="layout-l"><div class="content_container"><div class="post"><h1 class="post-title">Python之Html解析方法(beautiful soup)</h1><div class="post-meta"><a href="/2020/02/09/Python之Html解析方法(beautiful soup)/#comments" class="comment-count"></a><p><span class="date">Feb 09, 2020</span><span><i id="busuanzi_container_page_pv"><i id="busuanzi_value_page_pv"></i><i>Schlägt</i></i></span></p></div><div class="post-content"><h1 id="Python之Html解析方法-beautiful-soup"><a href="#Python之Html解析方法-beautiful-soup" class="headerlink" title="Python之Html解析方法(beautiful soup)"></a>Python之Html解析方法(beautiful soup)</h1><h2 id="BeautifulSoup的安装及介绍"><a href="#BeautifulSoup的安装及介绍" class="headerlink" title="BeautifulSoup的安装及介绍"></a>BeautifulSoup的安装及介绍</h2><p>官方给出的几点介绍：<br>Beautiful Soup提供一些简单的、python式的函数用来处理导航、搜索、修改分析树等功能。它是一个工具箱，通过解析文档为用户提供需要抓取的数据，因为简单，所以不需要多少代码就可以写出一个完整的应用程序。<br>Beautiful Soup自动将输入文档转换为Unicode编码，输出文档转换为utf-8编码。你不需要考虑编码方式，除非文档没有指定一个编码方式，这时，Beautiful Soup就不能自动识别编码方式了。然后，你仅仅需要说明一下原始编码方式就可以了。<br>Beautiful Soup已成为和lxml、html6lib一样出色的python解释器，为用户灵活地提供不同的解析策略或强劲的速度。</p>
+<p>Beautiful Soup的安装</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">pip install beautifulsoup4</span><br></pre></td></tr></table></figure>
+
+<h2 id="BeautifulSoup中的HTML解析器对比"><a href="#BeautifulSoup中的HTML解析器对比" class="headerlink" title="BeautifulSoup中的HTML解析器对比"></a>BeautifulSoup中的HTML解析器对比</h2><table>
+<thead>
+<tr>
+<th>解析器</th>
+<th>使用方法</th>
+<th>优势</th>
+<th>劣势</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>Python</code>标准库</td>
+<td><code>BeautifulSoup(markup, “html.parser”)</code></td>
+<td><code>Python</code>的内置标准库；执行速度适中；文档容错能力强</td>
+<td><code>Python 2.7.3 or 3.2.2</code>)前 的版本中文档容错能力差</td>
+</tr>
+<tr>
+<td><code>lxml HTML</code> 解析器</td>
+<td><code>BeautifulSoup(markup, “lxml”)</code></td>
+<td>速度快；文档容错能力强</td>
+<td>需要安装<code>C</code>语言库</td>
+</tr>
+<tr>
+<td><code>lxml XML</code> 解析器</td>
+<td><code>BeautifulSoup(markup, [“lxml”, “xml”])</code></td>
+<td>速度快；唯一支持<code>XML</code>的解析器</td>
+<td>需要安装<code>C</code>语言库</td>
+</tr>
+<tr>
+<td><code>html5lib</code></td>
+<td><code>BeautifulSoup(markup, “html5lib”)</code></td>
+<td>最好的容错性；以浏览器的方式解析文档；生成<code>HTML5</code>格式的文档</td>
+<td>速度慢；不依赖外部扩展</td>
+</tr>
+</tbody></table>
+<p>BeautifulSoup是一个可以从html或xml文件中提取数据的Python库。它能够通过你喜欢的转换器实现惯用的文档导航、查找、修改文档的方式。在Python开发中，主要用的是BeautifulSoup的查找提取功能，修改功能很少使用</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line">1、安装BeautifulSoup</span><br><span class="line">pip3 install beautifulsoup4</span><br><span class="line"></span><br><span class="line">2、安装第三方html解析器lxml</span><br><span class="line">pip3 install lxml</span><br><span class="line"></span><br><span class="line">3、安装纯Python实现的html5lib解析器</span><br><span class="line">pip3 install html5lib</span><br></pre></td></tr></table></figure>
+
+<h2 id="BeautifulSoup的使用："><a href="#BeautifulSoup的使用：" class="headerlink" title="BeautifulSoup的使用："></a>BeautifulSoup的使用：</h2><p>1、导入bs4库</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">from bs4 import BeautifulSoup #导入bs4库</span><br></pre></td></tr></table></figure>
+
+<p>2、创建包含html代码的字符串</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line">html_str = &quot;&quot;&quot;</span><br><span class="line"></span><br><span class="line">&lt;html&gt;&lt;head&gt;&lt;title&gt;The Dormouse&apos;s story&lt;/title&gt;&lt;/head&gt;</span><br><span class="line"></span><br><span class="line">&lt;body&gt;</span><br><span class="line"></span><br><span class="line">&lt;p class=&quot;title&quot;&gt;&lt;b&gt;The Dormouse&apos;s stopy&lt;/b&gt;&lt;/p&gt;</span><br><span class="line"></span><br><span class="line">&lt;p class=&quot;story&quot;&gt;Once upon a time there were three little sisters;and their names where</span><br><span class="line"></span><br><span class="line">&lt;a href=&quot;http://example.com/elsie&quot; class=&quot;sister&quot; id=&quot;link1&quot;&gt;&lt;!--Elsie--&gt;&lt;/a&gt;</span><br><span class="line"></span><br><span class="line">&quot;&quot;&quot;</span><br></pre></td></tr></table></figure>
+
+<p>3、创建BeautifulSoup对象</p>
+<p>（1）直接通过字符串方式创建</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">soup = BeautifulSoup(html_str,&apos;lxml&apos;) #html.parser是解析器，也可是lxml</span><br><span class="line"></span><br><span class="line">print(soup.prettify()) ------&gt;输出soup对象的内容</span><br></pre></td></tr></table></figure>
+
+<p>（2）通过已有的文件来创建</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">soup = BeautifulSoup(open(&apos;/home/index.html&apos;),features=&apos;html.parser&apos;)#html.parser是解析器，也可是lxml</span><br></pre></td></tr></table></figure>
+
+<p>4、BeautifulSoup对象的种类：BeautifulSoup将复杂HTML文档转换成一个复杂的树形结构，每个节点都是Python对象</p>
+<p>（1）BeautifulSoup：表示的是一个文档的全部内容。大部分时候，可以把它当作Tag对象，是一个特殊的Tag，因为BeautifulSoup对象并不是真正的HTML和XML，所以没有name和attribute属性</p>
+<p>（2）Tag：与XML或HTML原生文档中的Tag相同，通俗讲就是标记</p>
+<p>如：</p>
+<p>抽取title：print（soup.title）</p>
+<p>抽取a ： print（soup.a）</p>
+<p>抽取p：print（soup.p）</p>
+<p>Tag中有两个重要的属性：name和attributes。每个Tag都有自己的名字，通过.name来获取</p>
+<p>print（soup.title.name）</p>
+<p>操作Tag属性的方法和操作字典相同</p>
+<p>如：</p><p class="’p1’">Hello World</p><p></p>
+<p>print（soup.p[‘class’]）</p>
+<p>也可以直接“点”取属性，如 .attrs 获取Tag中所有属性</p>
+<p>print（soup.p.attrs）</p>
+<p>（3）NavigableString：获取标记内部的文字.string</p>
+<p>BeautifulSoup用 NavigableString类来封装Tag中的字符串，一个 NavigableString字符串与Python中的Unicode字符串相同，通过unicode（）方法可以直接将 NavigableString对象转换成Unicode字符串</p>
+<p>如：u_string = unicode(soup.p.string)</p>
+<p>（4）Comment：对于一些特殊对象，如果不清楚这个标记.string的情况下，可能造成数据提取混乱。因此在提取字符串时，可以判断下类型：</p>
+<p>if type(soup.a.string) == bs4.element.Comment:</p>
+<p>print(soup.a.string)</p>
+<p>5、遍历文档</p>
+<p>（1）子节点：</p>
+<p>A、对于直接子节点可以通过 .contents 和 .children来访问</p>
+<p>.contents —-&gt;将Tag子节点以列表的方式输出</p>
+<p>print（soup.head.contents）</p>
+<p>.children —–&gt;返回一个生成器，对Tag子节点进行循环</p>
+<p>for child in soup.head.children:</p>
+<p>print（child）</p>
+<p>B、获取子节点的内容</p>
+<p>.string —&gt; 如果标记里没有标记了，则返回内容；如果标记里只有一个唯一的标记，则返回最里面的内容；如果包含多个子节点，Tag无法确定.string方法应该返回哪个时，则返回None</p>
+<p>.strings —-&gt;主要应用于Tag中包含多个字符串的情况，可以进行循环遍历</p>
+<p>for str in soup.strings:</p>
+<p>print（repr(str)）</p>
+<p>.stripped_string —–&gt;可以去掉字符串中包含的空格或空行</p>
+<p>for str in soup.stripped_strings:</p>
+<p>print(repr(str))</p>
+<p>（2）父节点</p>
+<p>A、通过.parent属性来获取某个元素的父节点，如：</p>
+<p>print（soup.title.parent）</p>
+<p>B、通过.parents属性可以递归得到元素的所有父辈节点</p>
+<p>for parent in soup.a.parents:</p>
+<p>if parent is None:</p>
+<p>print(parent)</p>
+<p>else:</p>
+<p>print(parent.name)</p>
+<p>（3）兄弟节点</p>
+<p>. next_sibling —–&gt;获取该节点的下一个兄弟节点</p>
+<p>. previous_sibling —–&gt;获取该节点的上一个兄弟节点</p>
+<p>（4）前后节点</p>
+<p>. next_elements —–&gt;获得该节点前面的所有节点</p>
+<p>. previous_elements —–&gt;获得该节点后面的所有节点</p>
+<p>6、搜索文档树</p>
+<p>（1）find_all(name,attrs,recursive,text,**kwargs)</p>
+<p>A、name参数：查找名字为name的标记</p>
+<p>print（soup.find_all(‘‘’’b)）</p>
+<p>B、text参数：查找文档中字符串的内容</p>
+<p>C、 recursive参数：检索当前Tag的所有子孙节点时，若只想找直接子节点， 该参数设置为False</p>
+<p>7、CSS选择器：使用soup.select()函数</p>
+<p>（1）通过标记名查找</p>
+<p>print（soup.select(“title”)）</p>
+<p>（2）通过Tag的class属性值查找</p>
+<p>print（soup.select(“.sister”)）</p>
+<p>（3）通过Tag的id属性值查找</p>
+<p>print（soup.select(“#sister”)）</p>
+<p>（4）通过是否存在某个属性查找</p>
+<p>print（soup.select(“a[href]”)）</p>
+<p>（5）通过属性值查找</p>
+<p>print（soup.select(‘a[href=”<a href="http://exam.com&quot;]&#39;)）" target="_blank" rel="noopener">http://exam.com&quot;]&#39;)）</a></p>
+<p>参考链接：<br><a href="https://www.cnblogs.com/lone5wolf/p/10881395.html" target="_blank" rel="noopener">https://www.cnblogs.com/lone5wolf/p/10881395.html</a><br><a href="https://blog.csdn.net/IMW_MG/article/details/78220979" target="_blank" rel="noopener">https://blog.csdn.net/IMW_MG/article/details/78220979</a></p>
+</div><div class="post-copyright"><blockquote><p>Ursprünglicher Autor: Bean</p><p>Ursprünglicher Link: <a href="http://yoursite.com/2020/02/09/Python之Html解析方法(beautiful soup)/">http://yoursite.com/2020/02/09/Python之Html解析方法(beautiful soup)/</a></p><p>Copyright-Erklärung: Bitte geben Sie die Quelle des Nachdrucks an.</p></blockquote></div><div class="tags"><a href="/tags/Web/">Web</a></div><div class="post-share"><div class="social-share"><span>Aktie:</span></div></div><div class="post-nav"><a href="/2020/02/09/python操作数据库（Mysql）/" class="pre">python操作数据库（Mysql）</a><a href="/2020/02/03/hexo博客搭建（保姆级教程）/" class="next">hexo博客搭建（保姆级教程）</a></div><div id="comments"></div></div></div></div><div class="layout-r"><div id="sidebar"><div class="search-pla"></div><div id="toc" class="widget"><div class="widget-title"><i class="fa fa-fei">Inhalte</i></div><ol class="toc"><li class="toc-item toc-level-1"><a class="toc-link" href="#Python之Html解析方法-beautiful-soup"><span class="toc-text">Python之Html解析方法(beautiful soup)</span></a><ol class="toc-child"><li class="toc-item toc-level-2"><a class="toc-link" href="#BeautifulSoup的安装及介绍"><span class="toc-text">BeautifulSoup的安装及介绍</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#BeautifulSoup中的HTML解析器对比"><span class="toc-text">BeautifulSoup中的HTML解析器对比</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#BeautifulSoup的使用："><span class="toc-text">BeautifulSoup的使用：</span></a></li></ol></li></ol></div><div class="widget"><div class="widget-title"><i class="fa fa-xie"> Letzte</i></div><ul class="post-list"><li class="post-list-item"><a class="post-list-link" href="/2020/02/19/【读薄 CSAPP】壹 数据表示/">【读薄 CSAPP】壹 数据表示</a></li><li class="post-list-item"><a class="post-list-link" href="/2020/02/18/【读薄 CSAPP】肆 链接/">【读薄 CSAPP】肆 链接</a></li><li class="post-list-item"><a class="post-list-link" href="/2020/02/18/服务器+宝塔+Chevereto 搭建个人图床/">服务器+宝塔+Chevereto 搭建个人图床</a></li><li class="post-list-item"><a class="post-list-link" href="/2020/02/17/【读薄 CSAPP】叁 内存与缓存/">【读薄 CSAPP】叁 内存与缓存</a></li><li class="post-list-item"><a class="post-list-link" href="/2020/02/16/【读薄 CSAPP】贰 机器指令与程序优化/">【读薄 CSAPP】贰 机器指令与程序优化</a></li><li class="post-list-item"><a class="post-list-link" href="/2020/02/15/SQL查询语句的基本使用方法/">SQL查询语句的基本使用方法</a></li><li class="post-list-item"><a class="post-list-link" href="/2020/02/15/【读薄 CSAPP】零 系列概览/">【读薄 CSAPP】零 系列概览</a></li><li class="post-list-item"><a class="post-list-link" href="/2020/02/09/python操作数据库（Mysql）/">python操作数据库（Mysql）</a></li><li class="post-list-item"><a class="post-list-link" href="/2020/02/09/Python之Html解析方法(beautiful soup)/">Python之Html解析方法(beautiful soup)</a></li><li class="post-list-item"><a class="post-list-link" href="/2020/02/03/hexo博客搭建（保姆级教程）/">hexo博客搭建（保姆级教程）</a></li></ul></div><div class="widget"><div class="widget-title"><i class="fa fa-biao"> Tags</i></div><div class="tagcloud"><a href="/tags/Web/" style="font-size: 15px;">Web</a> <a href="/tags/物联网/" style="font-size: 15px;">物联网</a> <a href="/tags/ubuntu/" style="font-size: 15px;">ubuntu</a> <a href="/tags/计算机视觉及测距/" style="font-size: 15px;">计算机视觉及测距</a> <a href="/tags/opencv/" style="font-size: 15px;">opencv</a> <a href="/tags/数据库/" style="font-size: 15px;">数据库</a> <a href="/tags/CSAPP/" style="font-size: 15px;">CSAPP</a></div></div><div class="widget"><div class="widget-title"><i class="fa fa-archive"> Archiv</i></div><ul class="archive-list"><li class="archive-list-item"><a class="archive-list-link" href="/archives/2020/02/">February 2020</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2019/11/">November 2019</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2019/10/">October 2019</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2019/09/">September 2019</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2019/08/">August 2019</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2019/06/">June 2019</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2019/05/">May 2019</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2019/04/">April 2019</a></li></ul></div><div class="widget"><div class="widget-title"><i class="fa fa-you"> Blogroll</i></div><ul></ul><a href="https://blog.csdn.net/xbean1028/" title="CSDN" target="_blank">CSDN</a><ul></ul><a href="https://github.com/Xbean1028/" title="github" target="_blank">github</a></div></div></div></div><a id="totop" href="#top"></a><div id="footer"><div class="footer-info"><p><a href="/baidusitemap.xml">Sitemap</a> |  <a href="/atom.xml">Abonnieren Sie diese Site</a> |  <a href="/about/">Kontaktieren Sie den Blogger</a></p><p>本站总访问量：<i id="busuanzi_container_site_pv"><i id="busuanzi_value_site_pv"></i></i>次，本站总访客数:<i id="busuanzi_container_site_uv"><i id="busuanzi_value_site_uv"></i></i>人</p><p><span> Copyright &copy;<a href="/." rel="nofollow">Bean.</a></span><span> Theme by<a rel="nofollow" target="_blank" href="https://github.com/chaooo/hexo-theme-BlueLake"> BlueLake.</a></span><span> Count by<a href="http://busuanzi.ibruce.info/"> busuanzi.</a></span><span> Powered by<a rel="nofollow" target="_blank" href="https://hexo.io"> Hexo.</a></span></p></div></div></div><script src="https://busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js" async></script><script type="text/javascript" src="/js/search.json.js?v=2.0.4"></script><script type="text/javascript" src="/js/toctotop.js?v=2.0.4" async></script><link rel="stylesheet" type="text/css" href="/share/css/share.css"><script type="text/javascript" src="/share/js/social-share.js" charset="utf-8"></script><script type="text/javascript" src="/share/js/qrcode.js" charset="utf-8"></script></body></html>
