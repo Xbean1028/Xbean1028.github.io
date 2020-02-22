@@ -1,0 +1,229 @@
+<!DOCTYPE html><html lang="null"><head><meta name="generator" content="Hexo 3.9.0"><meta http-equiv="content-type" content="text/html; charset=utf-8"><meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0" name="viewport"><meta content="yes" name="apple-mobile-web-app-capable"><meta content="black-translucent" name="apple-mobile-web-app-status-bar-style"><meta content="telephone=no" name="format-detection"><meta name="description" content="Bean's blog"><meta name="keywords" content="xbean1028,software"><link rel="stylesheet" type="text/css" href="//fonts.loli.net/css?family=Source+Code+Pro"><link rel="stylesheet" type="text/css" href="/css/style-dark.css?v=2.0.4"><link rel="stylesheet" type="text/css" href="/css/highlight-dark.css?v=2.0.4"><link rel="Shortcut Icon" href="/favicon.ico"><link rel="bookmark" href="/favicon.ico"><link rel="apple-touch-icon" href="/apple-touch-icon.png"><link rel="apple-touch-icon-precomposed" href="/apple-touch-icon.png"><title>【读薄 CSAPP】捌 网络编程 | Bean Panda</title></head><body><div class="body_container"><div id="header"><div class="site-name"><h1 class="hidden">【读薄 CSAPP】捌 网络编程</h1><a id="logo" href="/.">Bean Panda</a><p class="description">软件小白，江山点墨</p></div><div id="nav-menu"><a href="/." class="current"><i class="fa fa-home"> Start</i></a><a href="/archives/"><i class="fa fa-archive"> Archiv</i></a><a href="/about/"><i class="fa fa-user"> Über</i></a><a href="/atom.xml"><i class="fa fa-rss"> RSS</i></a></div><div id="search-form"><div id="result-mask" class="hide"></div><label><input id="search-key" type="text" autocomplete="off" placeholder="Suche"></label><div id="result-wrap" class="hide"><div id="search-result"></div></div><div class="hide"><template id="search-tpl"><div class="item"><a href="/{path}" title="{title}"><div class="title">{title}</div><div class="time">{date}</div><div class="tags">{tags}</div></a></div></template></div></div></div><div id="layout" class="layout-g"><div class="layout-l"><div class="content_container"><div class="post"><h1 class="post-title">【读薄 CSAPP】捌 网络编程</h1><div class="post-meta"><a href="/2020/02/22/【读薄 CSAPP】捌 网络编程/#comments" class="comment-count"></a><p><span class="date">Feb 22, 2020</span><span><i id="busuanzi_container_page_pv"><i id="busuanzi_value_page_pv"></i><i>Schlägt</i></i></span></p></div><div class="post-content"><h1 id="【读薄-CSAPP】捌-网络编程"><a href="#【读薄-CSAPP】捌-网络编程" class="headerlink" title="【读薄 CSAPP】捌 网络编程"></a>【读薄 CSAPP】捌 网络编程</h1><p>在这个网络成为『必需品』的时代，让我们从最原始的 Socket(套接字)开始，来看看程序是如何通过网络进行『沟通』的。更有意思的是，这一讲我们会介绍如何通过 C 语言从零开始实现自己的服务器程序。</p>
+<p>[TOC]</p>
+<h2 id="学习目标"><a href="#学习目标" class="headerlink" title="学习目标"></a>学习目标</h2><ol>
+<li>了解网络的基本架构</li>
+<li>了解常见的网络协议</li>
+<li>掌握基本的网络相关编程技巧</li>
+<li>学会编写 web 服务器</li>
+</ol>
+<h2 id="网络架构"><a href="#网络架构" class="headerlink" title="网络架构"></a>网络架构</h2><p>计算机网络的知识可谓是非常『保值』的，因为这么多基础设备还在运行着，基本机制在短时间内很难改变，关于网络的相关的讲解还有参考链接[1][2]，我觉得也非常不错，大家感兴趣可以看看。</p>
+<p>客户端-服务器模型是网络应用最广泛使用的模型，客户端进程发送请求给服务器进程，服务器进程获取所需资源并响应客户端进程的请求，客户端进程收到响应后展示给用户。网络相关的处理，都是通过网络适配器来完成的，具体在硬件上为（右下角）：</p>
+<p><img src="https://imgconvert.csdnimg.cn/aHR0cHM6Ly93ZHh0dWIuY29tL2ltYWdlcy8xNDYxOTQ1ODY2OTg4My5qcGc?x-oss-process=image/format,png" alt="img"></p>
+<p>根据网络的应用范围和架构层级，可以分成三个部分：</p>
+<ul>
+<li>SAN - System Area Network<ul>
+<li>Switched Ethernet, Quadrics QSW, …</li>
+</ul>
+</li>
+<li>LAN - Local Area Network<ul>
+<li>Ethernet, ..</li>
+</ul>
+</li>
+<li>WAN - Wide Area Network<ul>
+<li>High speed point-to-point phone lines</li>
+</ul>
+</li>
+</ul>
+<h3 id="最底层-Ethernet-Segment"><a href="#最底层-Ethernet-Segment" class="headerlink" title="最底层 - Ethernet Segment"></a>最底层 - Ethernet Segment</h3><p>由若干主机(hosts)通过交换机(hub)连接，通常范围是房间或一层楼，如下图所示：</p>
+<p><img src="https://imgconvert.csdnimg.cn/aHR0cHM6Ly93ZHh0dWIuY29tL2ltYWdlcy8xNDYxOTQ2NDE0MjA1Ni5qcGc?x-oss-process=image/format,png" alt="img"></p>
+<ul>
+<li>每个 Ethernet 适配器有一个唯一的 48 位的地址（也就是 MAC 地址），例如 <code>00:16:ea:e3:54:e6</code></li>
+<li>不同主机间发送的数据称为帧(frame)</li>
+<li>Hub 会把每个端口发来的所有数据复制到其他的端口<ul>
+<li>所有的主机都可以看到所有的数据（注意安全问题）</li>
+</ul>
+</li>
+</ul>
+<h3 id="下一层-Bridged-Ethernet-Segment"><a href="#下一层-Bridged-Ethernet-Segment" class="headerlink" title="下一层 - Bridged Ethernet Segment"></a>下一层 - Bridged Ethernet Segment</h3><p>通常范围是一层楼，通过不同的 bridge 来连接不同的 ethernet segment。Bridge 知道从某端口出发可达的主机，并有选择的在端口间复制数据。</p>
+<p><img src="https://imgconvert.csdnimg.cn/aHR0cHM6Ly93ZHh0dWIuY29tL2ltYWdlcy8xNDYxOTQ2NzM0Mjg5OS5qcGc?x-oss-process=image/format,png" alt="img"></p>
+<p>为了从概念上简化，我们可以认为，所有的 hub, bridge 可以抽象为一条线，如下图所示：</p>
+<p><img src="https://imgconvert.csdnimg.cn/aHR0cHM6Ly93ZHh0dWIuY29tL2ltYWdlcy8xNDYxOTQ2OTA3Nzc0MS5qcGc?x-oss-process=image/format,png" alt="img"></p>
+<h3 id="下一层-internets"><a href="#下一层-internets" class="headerlink" title="下一层 - internets"></a>下一层 - internets</h3><p>不同的（也许不兼容）的 LAN 可以通过 router 来进行物理上的连接，这样连接起来的网络称为 internet（注意是小写，大写的 Internet 可以认为是最著名的 internet）</p>
+<p><img src="https://imgconvert.csdnimg.cn/aHR0cHM6Ly93ZHh0dWIuY29tL2ltYWdlcy8xNDYxOTQ3MTIzMzUzNC5qcGc?x-oss-process=image/format,png" alt="img"></p>
+<p>internet 的逻辑结构为：</p>
+<ul>
+<li>Ad hoc interconnection of networks<ul>
+<li>没有特定的拓扑结构</li>
+<li>不同的 router 和 link 差异可能很大</li>
+</ul>
+</li>
+<li>通过在不同的网络间跳转来传递 packet<ul>
+<li>Router 是不同网络间的连接</li>
+<li>不同的 packet 可能会走不同的路线</li>
+</ul>
+</li>
+</ul>
+<h2 id="网络协议"><a href="#网络协议" class="headerlink" title="网络协议"></a>网络协议</h2><p>在不同的 LAN 和 WAN 中传输数据，就要守规矩，这个规矩就是协议。协议负责做的事情有：</p>
+<ul>
+<li>提供 naming scheme<ul>
+<li>定义 host address 格式</li>
+<li>每个主机和路由器都至少有一个独立的 internet 地址</li>
+</ul>
+</li>
+<li>提供 delivery mechanism<ul>
+<li>定义了标准的传输单元 - packet</li>
+<li>Packet 包含 header 和 payload<ul>
+<li>header 包括 packet size, source 和 destination address</li>
+<li>payload 包括需要传输的数据</li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+<p>在这样的协议下，具体的数据传输如下图所示，这里 PH = Internet packet header, FH = LAN frame header（具体名词解释可见参考文末参考资料）：</p>
+<p><img src="https://imgconvert.csdnimg.cn/aHR0cHM6Ly93ZHh0dWIuY29tL2ltYWdlcy8xNDYxOTc4MTMzNTg3Mi5qcGc?x-oss-process=image/format,png" alt="img"></p>
+<p>Internet 是 internet 最为著名的例子。主要基于 TCP/IP 协议族：</p>
+<ul>
+<li>IP (Internet Protocal)<ul>
+<li>Provides <strong>basic naming scheme</strong> and unreliable <strong>delivery capability</strong> of packets (datagrams) from <strong>host-to-host</strong></li>
+</ul>
+</li>
+<li>UDP (Unreliable Datagram Protocol)<ul>
+<li>Uses IP to provide <strong>unreliable</strong> datagram delivery from <strong>process-to-process</strong></li>
+</ul>
+</li>
+<li>TCP (Transmission Control Protocol)<ul>
+<li>Uses IP to provide <strong>reliable</strong> byte streams from <strong>process-to-process</strong> over <strong>connections</strong></li>
+</ul>
+</li>
+</ul>
+<p>Accessed via a mix of Unix file I/O and functions from <strong>sockets interface</strong>.（很多东西不是很好翻译，用原文比较准确）</p>
+<ul>
+<li>主机有 32 位的 IP 地址 - 23.235.46.133<ul>
+<li>IPv4 - 32 位地址，IPv6 - 128 位地址</li>
+</ul>
+</li>
+<li>IP 地址被映射到域名 - 23.235.46.133 映射到 <a href="http://www.wdxtub.com" target="_blank" rel="noopener">www.wdxtub.com</a></li>
+<li>不同主机之间的进程，可以通过 connection 来交换数据</li>
+</ul>
+<h3 id="IP-地址"><a href="#IP-地址" class="headerlink" title="IP 地址"></a>IP 地址</h3><p>我们会用一个叫做 IP address struct 的东西来存储，并且 IP 地址是以 network byte order（也就是大端）来进行存储的</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">// Internet address structure</span><br><span class="line">struct in_addr &#123;</span><br><span class="line">    uint32_t s_addr;    // network byte order (big-endian)</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>为了方便读，一般用下面的形式来进行表示：</p>
+<p>IP 地址：<code>0x8002C2F2 = 128.2.194.242</code></p>
+<p>具体的转换可以使用 <code>getaddrinfo</code> 和 <code>getnameinfo</code> 函数</p>
+<h3 id="Internet-域名"><a href="#Internet-域名" class="headerlink" title="Internet 域名"></a>Internet 域名</h3><p>这里主要需要了解的就是 Domain Naming System(DNS) 的概念，用来做 IP 地址到域名的映射。具体可以用 <code>nslookup</code> 命令来查看，下面是一些例子</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br></pre></td><td class="code"><pre><span class="line">$ hostname</span><br><span class="line">wdxtub.local</span><br><span class="line"></span><br><span class="line">$ nslookup www.wdxtub.com</span><br><span class="line">Server:		8.8.8.8</span><br><span class="line">Address:	8.8.8.8#53</span><br><span class="line"></span><br><span class="line">Non-authoritative answer:</span><br><span class="line">www.wdxtub.com	canonical name = wdxtub.github.io.</span><br><span class="line">wdxtub.github.io	canonical name = github.map.fastly.net.</span><br><span class="line">Name:	github.map.fastly.net</span><br><span class="line">Address: 23.235.39.133</span><br><span class="line"></span><br><span class="line">$ nslookup www.twitter.com</span><br><span class="line">Server:		8.8.8.8</span><br><span class="line">Address:	8.8.8.8#53</span><br><span class="line"></span><br><span class="line">Non-authoritative answer:</span><br><span class="line">www.twitter.com	canonical name = twitter.com.</span><br><span class="line">Name:	twitter.com</span><br><span class="line">Address: 199.16.156.6</span><br><span class="line">Name:	twitter.com</span><br><span class="line">Address: 199.16.156.198</span><br><span class="line">Name:	twitter.com</span><br><span class="line">Address: 199.16.156.230</span><br><span class="line">Name:	twitter.com</span><br><span class="line">Address: 199.16.156.70</span><br></pre></td></tr></table></figure>
+
+<h3 id="Internet-连接"><a href="#Internet-连接" class="headerlink" title="Internet 连接"></a>Internet 连接</h3><p>客户端和服务器通过连接(connection)来发送字节流，特点是：</p>
+<ul>
+<li>点对点: 连接一对进程</li>
+<li>全双工: 数据同时可以在两个方向流动</li>
+<li>可靠: 字节的发送的顺序和收到的一致</li>
+</ul>
+<p>Socket 则可以认为是 connection 的 endpoint，socket 地址是一个 <code>IPaddress:port</code> 对。</p>
+<p>Port（端口）是一个 16 位的整数，用来标识不同的进程，利用不同的端口来连接不同的服务：</p>
+<ul>
+<li><p>Ephemeral port: Assigned automatically by client kernel when client makes a connection request</p>
+</li>
+<li><p>Well-known port: Associated with some <strong>service</strong> provided by a server（在 linux 系统上可以在<code>/etc/services</code>中查看具体的信息）</p>
+<ul>
+<li>echo server: 7/echo</li>
+<li>ssh server: 22/ssh</li>
+<li>email server: 25/smtp</li>
+<li>web servers: 80/http</li>
+</ul>
+</li>
+</ul>
+<h3 id="Socket-接口"><a href="#Socket-接口" class="headerlink" title="Socket 接口"></a>Socket 接口</h3><p>一系列系统级的函数，和 Unix I/O 配合构造网络应用（在所有的现代操作系统上都可用）。</p>
+<p>对于 kernel 来说，socket 是 endpoint of communication；对于应用程序来说，socket 是 file descriptor，用来读写（回忆一下，STDIN 和 STDOUT 也是 file descriptor）。客户端和服务器通过读写对应的 socket descriptor 来进行。</p>
+<p>具体连接的过程可以参考下图，注意，这一讲不做过多细节探讨，相信相关信息请参考书本对应内容。</p>
+<p><img src="https://imgconvert.csdnimg.cn/aHR0cHM6Ly93ZHh0dWIuY29tL2ltYWdlcy8xNDYxOTgwODkxMjg4MC5qcGc?x-oss-process=image/format,png" alt="img"></p>
+<h2 id="简单服务器实现"><a href="#简单服务器实现" class="headerlink" title="简单服务器实现"></a>简单服务器实现</h2><h3 id="架构总览"><a href="#架构总览" class="headerlink" title="架构总览"></a>架构总览</h3><p>写服务器，最重要的就是理清思路，上节课我们介绍了诸多概念，尤其是最后提到的 <code>getaddrinfo</code> 和 <code>getnameinfo</code>，都是我们在搭建过程中必不可少的工具。参考上面的流程图，整个的工作流程有 5 步：</p>
+<ol>
+<li><p>开启服务器（<code>open_listenfd</code>函数，做好接收请求的准备）</p>
+<ul>
+<li><p><code>getaddrinfo</code>: 设置服务器的相关信息，具体可以参见 图1&amp;2</p>
+</li>
+<li><p><code>socket</code>: 创建 socket descriptor，也就是之后用来读写的 file descriptor</p>
+<ul>
+<li><code>int socket(int domain, int type, int protocol)</code></li>
+<li>例如 <code>int clientfd = socket(AF_INET, SOCK_STREAM, 0);</code></li>
+<li><code>AF_INET</code> 表示在使用 32 位 IPv4 地址</li>
+<li><code>SOCK_STREAM</code> 表示这个 socket 将是 connection 的 endpoint</li>
+<li>前面这种写法是协议相关的，建议使用 <code>getaddrinfo</code> 生成的参数来进行配置，这样就是协议无关的了</li>
+</ul>
+</li>
+<li><p><code>bind</code>: 请求 kernel 把 socket address 和 socket descriptor 绑定</p>
+<ul>
+<li><code>int bind(int sockfd, SA *addr, socklen_t addrlen);</code></li>
+<li>The process can read bytes that arrive on the connection whose endpoint is <code>addr</code> by reading from descriptor <code>sockfd</code></li>
+<li>Similarly, writes to <code>sockfd</code> are transferred along connection whose endpoint is <code>addr</code></li>
+<li>最好是用 <code>getaddrinfo</code> 生成的参数作为 <code>addr</code> 和 <code>addrlen</code></li>
+</ul>
+</li>
+<li><p><code>listen</code>: 默认来说，我们从<code>socket</code>函数中得到的 descriptor 默认是 active socket（也就是客户端的连接），调用 <code>listen</code>函数告诉 kernel 这个 socket 是被服务器使用的</p>
+<ul>
+<li><code>int listen(int sockfd, int backlog);</code></li>
+<li>把 <code>sockfd</code> 从 active socket 转换成 listening socket，用来接收客户端的请求</li>
+<li><code>backlog</code> 的数值表示 kernel 在接收多少个请求之后（队列缓存起来）开始拒绝请求</li>
+</ul>
+</li>
+<li><p>[*]<code>accept</code>: 调用<code>accept</code>函数，开始等待客户端请求</p>
+<ul>
+<li><code>int accept(int listenfd, SA *addr, int *addrlen);</code></li>
+<li>等待绑定到 <code>listenfd</code> 的连接接收到请求，然后把客户端的 socket address 写入到 <code>addr</code>，大小写入到 <code>addrlen</code></li>
+<li>返回一个 connected descriptor 用来进行信息传输（类似 Unix I/O）</li>
+<li>具体的过程可以参考 图3</li>
+</ul>
+</li>
+</ul>
+</li>
+<li><p>开启客户端（<code>open_clientfd</code>函数，设定访问地址，尝试连接）</p>
+<ul>
+<li><p><code>getaddrinfo</code>: 设置客户端的相关信息，具体可以参见 图1&amp;2</p>
+</li>
+<li><p><code>socket</code>: 创建 socket descriptor，也就是之后用来读写的 file descriptor</p>
+</li>
+<li><p><code>connect</code>: 客户端调用<code>connect</code>来建立和服务器的连接</p>
+<ul>
+<li><code>int connect(int clientfd, SA *addr, socklen_t addrlen);</code></li>
+<li>尝试与在 socker address <code>addr</code> 的服务器建立连接</li>
+<li>如果成功 <code>clientfd</code> 可以进行读写</li>
+<li>connection 由 socket 对描述 <code>(x:y, addr.sin_addr:addr.sin_port)</code></li>
+<li><code>x</code> 是客户端地址，<code>y</code> 是客户端临时端口，后面的两个是服务器的地址和端口</li>
+<li>最好是用 <code>getaddrinfo</code> 生成的参数作为 <code>addr</code> 和 <code>addrlen</code></li>
+</ul>
+</li>
+</ul>
+</li>
+<li><p>交换数据（主要是一个流程循环，客户端向服务器写入，就是发送请求；服务器向客户端写入，就是发送响应）</p>
+<ul>
+<li>[Client]<code>rio_writen</code>: 写入数据，相当于向服务器发送请求</li>
+<li>[Client]<code>rio_readlineb</code>: 读取数据，相当于从服务器接收响应</li>
+<li>[Server]<code>rio_readlineb</code>: 读取数据，相当于从客户端接收请求</li>
+<li>[Server]<code>rio_writen</code>: 写入数据，相当于向客户端发送响应</li>
+</ul>
+</li>
+<li><p>关闭客户端（主要是<code>close</code>）</p>
+<ul>
+<li>[Client]<code>close</code>: 关闭连接</li>
+</ul>
+</li>
+<li><p>断开客户端（服务接收到客户端发来的 EOF 消息之后，断开已有的和客户端的连接）</p>
+<ul>
+<li>[Server]<code>rio_readlineb</code>: 收到客户端发来的关闭连接请求</li>
+<li>[Server]<code>close</code>: 关闭与客户端的连接</li>
+</ul>
+</li>
+</ol>
+<h3 id="Client-open-clientfd"><a href="#Client-open-clientfd" class="headerlink" title="Client open_clientfd"></a>Client <code>open_clientfd</code></h3><p>用来建立和服务器的连接，协议无关</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br></pre></td><td class="code"><pre><span class="line">int open_clientfd(char *hostname, char *port) &#123;</span><br><span class="line">    int clientfd;</span><br><span class="line">    struct addrinfo hints, *listp, *p;</span><br><span class="line">    </span><br><span class="line">    // Get a list of potential server address</span><br><span class="line">    memset(&amp;hints, 0, sizeof(struct addrinfo));</span><br><span class="line">    hints.ai_socktype = SOCK_STREAM; // Open a connection</span><br><span class="line">    hints.ai_flags = AI_NUMERICSERV; // using numeric port arguments</span><br><span class="line">    hints.ai_flags |= AI_ADDRCONFIG; // Recommended for connections</span><br><span class="line">    getaddrinfo(hostname, port, &amp;hints, &amp;listp);</span><br><span class="line">    </span><br><span class="line">    // Walk the list for one that we can successfully connect to</span><br><span class="line">    // 如果全部都失败，才最终返回失败（可能有多个地址）</span><br><span class="line">    for (p = listp; p; p = p-&gt;ai_next) &#123;</span><br><span class="line">        // Create a socket descriptor</span><br><span class="line">        // 这里使用从 getaddrinfo 中得到的参数，实现协议无关</span><br><span class="line">        if ((clientfd = socket(p-&gt;ai_family, p-&gt;ai_socktype,</span><br><span class="line">                               p-&gt;ai_protocol)) &lt; 0)</span><br><span class="line">            continue; // Socket failed, try the next</span><br><span class="line">        </span><br><span class="line">        // Connect to the server</span><br><span class="line">        // 这里使用从 getaddrinfo 中得到的参数，实现协议无关</span><br><span class="line">        if (connect(clientfd, p-&gt;ai_addr, p-&gt;ai_addrlen) != -1)</span><br><span class="line">            break; // Success</span><br><span class="line">        </span><br><span class="line">        close(clientfd); // Connect failed, try another</span><br><span class="line">    &#125;</span><br><span class="line">    </span><br><span class="line">    // Clean up</span><br><span class="line">    freeaddrinfo(listp);</span><br><span class="line">    if (!p) // All connections failed</span><br><span class="line">        return -1;</span><br><span class="line">    else // The last connect succeeded</span><br><span class="line">        return clientfd;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<h3 id="Server-open-listenfd"><a href="#Server-open-listenfd" class="headerlink" title="Server open_listenfd"></a>Server <code>open_listenfd</code></h3><p>创建 listening descriptor，用来接收来自客户端的请求，协议无关</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br></pre></td><td class="code"><pre><span class="line">int open_listenfd(char *port)&#123;</span><br><span class="line">    struct addrinfo hints, *listp, *p;</span><br><span class="line">    int listenfd, optval=1;</span><br><span class="line">    </span><br><span class="line">    // Get a list of potential server addresses</span><br><span class="line">    memset(&amp;hints, 0, sizeof(struct addrinfo));</span><br><span class="line">    hints.ai_socktype = SOCK_STREAM; // Accept connection</span><br><span class="line">    hints.ai_flags = AI_PASSIVE | AI_ADDRCONFIG; // on any IP address</span><br><span class="line">    hints.ai_flags |= AI_NUMERICSERV; // using port number</span><br><span class="line">    // 因为服务器不需要连接，所以原来填写地址的地方直接是 NULL</span><br><span class="line">    getaddrinfo(NULL, port, &amp;hints, &amp;listp); </span><br><span class="line">    </span><br><span class="line">    // Walk the list for one that we can successfully connect to</span><br><span class="line">    // 如果全部都失败，才最终返回失败（可能有多个地址）</span><br><span class="line">    for (p = listp; p; p = p-&gt;ai_next) &#123;</span><br><span class="line">        // Create a socket descriptor</span><br><span class="line">        // 这里使用从 getaddrinfo 中得到的参数，实现协议无关</span><br><span class="line">        if ((listenfd = socket(p-&gt;ai_family, p-&gt;ai_socktype,</span><br><span class="line">                               p-&gt;ai_protocol)) &lt; 0)</span><br><span class="line">            continue; // Socket failed, try the next</span><br><span class="line">        </span><br><span class="line">        // Eliminates &quot;Address already in use&quot; error from bind</span><br><span class="line">        setsockopt(listenfd, SOL_SOCKET, SO_REUSEADDR), </span><br><span class="line">                    (const void *)&amp;optval, sizeof(int));</span><br><span class="line">        </span><br><span class="line">        // Bind the descriptor to the address</span><br><span class="line">        if (bind(listenfd, p-&gt;ai_addr, p-&gt;ai_addrlen) == 0)</span><br><span class="line">            break; // Success</span><br><span class="line">        </span><br><span class="line">        close(listenfd); // Bind failed, try another</span><br><span class="line">    &#125;</span><br><span class="line">    </span><br><span class="line">    // Clean up</span><br><span class="line">    freeaddrinfo(listp);</span><br><span class="line">    if (!p) // No address worked</span><br><span class="line">        return -1;</span><br><span class="line">    </span><br><span class="line">    // Make it a listening socket ready to accept connection requests</span><br><span class="line">    if (listen(listenfd, LISTENQ) &lt; 0) &#123;</span><br><span class="line">        close(listenfd);</span><br><span class="line">        return -1;</span><br><span class="line">    &#125;</span><br><span class="line">    return listenfd;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<h2 id="简单的-socket-服务器实例"><a href="#简单的-socket-服务器实例" class="headerlink" title="简单的 socket 服务器实例"></a>简单的 socket 服务器实例</h2><h3 id="客户端-Echo-Client"><a href="#客户端-Echo-Client" class="headerlink" title="客户端 Echo Client"></a>客户端 Echo Client</h3><p>这个客户端做的事情很简单，就是把一段用户输入的文字发送到服务器，然后再把从服务器接收到的内容显示到输出中，具体可以参见注释</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br></pre></td><td class="code"><pre><span class="line">// echoclient.c</span><br><span class="line">#include &quot;csapp.h&quot;</span><br><span class="line"></span><br><span class="line">int main (int argc, char **argv) &#123;</span><br><span class="line">    int clientfd;</span><br><span class="line">    char *host, *port, buf[MAXLINE];</span><br><span class="line">    rio_t rio;</span><br><span class="line">    </span><br><span class="line">    host = argv[1];</span><br><span class="line">    port = argv[2];</span><br><span class="line">    </span><br><span class="line">    // 建立连接（前面已经详细介绍）</span><br><span class="line">    clientfd = Open_clientfd(host, port);</span><br><span class="line">    Rio_readinitb(&amp;rio, clientfd);</span><br><span class="line">    </span><br><span class="line">    while (Fgets(buf, MAXLINE, stdin) != NULL) &#123;</span><br><span class="line">        // 写入，也就是向服务器发送信息</span><br><span class="line">        Rio_writen(clientfd, buf, strlen(buf));</span><br><span class="line">        // 读取，也就是从服务器接收信息</span><br><span class="line">        Rio_readlineb(&amp;rio, buf, MAXLINE);</span><br><span class="line">        // 把从服务器接收的信息显示在输出中</span><br><span class="line">        Fputs(buf, stdout);</span><br><span class="line">    &#125;</span><br><span class="line">    Close(clientfd);</span><br><span class="line">    exit(0);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<h3 id="服务器-Iterative-Echo-Server"><a href="#服务器-Iterative-Echo-Server" class="headerlink" title="服务器 Iterative Echo Server"></a>服务器 Iterative Echo Server</h3><p>服务器做的工作也很简单，接收到从客户端发送的信息，然后返回一个一模一样的。具体参加注释。</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br></pre></td><td class="code"><pre><span class="line">// echoserveri.c</span><br><span class="line">#include &quot;csapp.h&quot;</span><br><span class="line">void echo(int connfd);</span><br><span class="line"></span><br><span class="line">int main(int argc, char **argv)&#123;</span><br><span class="line">    int listenfd, connfd;</span><br><span class="line">    socklen_t clientlen;</span><br><span class="line">    struct sockaddr_storage clientaddr; // Enough room for any addr</span><br><span class="line">    char client_hostname[MAXLINE], client_port[MAXLINE];</span><br><span class="line">    </span><br><span class="line">    // 开启监听端口，注意只开这么一次</span><br><span class="line">    listenfd = Open_listenfd(argv[1]);</span><br><span class="line">    while (1) &#123;</span><br><span class="line">        // 需要具体的大小</span><br><span class="line">        clientlen = sizeof(struct sockaddr_storage); // Important!</span><br><span class="line">        // 等待连接</span><br><span class="line">        connfd = Accept(listenfd, (SA *)&amp;clientaddr, &amp;clientlen);</span><br><span class="line">        // 获取客户端相关信息</span><br><span class="line">        Getnameinfo((SA *) &amp;clientaddr, clientlen, client_hostname,</span><br><span class="line">                     MAXLINE, client_port, MAXLINE, 0);</span><br><span class="line">        printf(&quot;Connected to (%s, %s)\n&quot;, client_hostname, client_port);</span><br><span class="line">        // 服务器具体完成的工作</span><br><span class="line">        echo(coonfd);</span><br><span class="line">        Close(connfd);</span><br><span class="line">    &#125;</span><br><span class="line">    exit(0);</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">void echo(int connfd) &#123;</span><br><span class="line">    size_t n;</span><br><span class="line">    char buf[MAXLINE];</span><br><span class="line">    rio_t rio;</span><br><span class="line">    </span><br><span class="line">    // 读取从客户端传输过来的数据</span><br><span class="line">    Rio_readinitb(&amp;rio, connfd);</span><br><span class="line">    while((n = Rio_readlineb(&amp;rio, buf, MAXLINE)) != 0) &#123;</span><br><span class="line">        printf(&quot;server received %d bytes\n&quot;, (int)n);</span><br><span class="line">        // 把从 client 接收到的信息再写回去</span><br><span class="line">        Rio_writen(connfd, buf, n);</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<h2 id="总结"><a href="#总结" class="headerlink" title="总结"></a>总结</h2><p>这一讲中，我们了解了网络的基本架构以及常见的网络协议，并通过编写 web 服务器掌握了基本的网络相关编程技巧。</p>
+<p>因为是用 C 语言来写，实现起来比较繁琐，但是对于理解整个网络的工作机制是非常有好处的，相信之后在用更高级语言来操作网络的时候，能够更加得心应手，毕竟知其所以然了嘛。</p>
+<h2 id="参考资料"><a href="#参考资料" class="headerlink" title="参考资料"></a>参考资料</h2><ul>
+<li><a href="http://www.cnblogs.com/vamei/archive/2012/12/05/2802811.html" target="_blank" rel="noopener">协议森林</a></li>
+<li><a href="http://www.cnblogs.com/maybe2030/p/4781555.html" target="_blank" rel="noopener">计算机网络基础知识总结</a></li>
+</ul>
+<h2 id="特别致谢"><a href="#特别致谢" class="headerlink" title="特别致谢"></a>特别致谢</h2><p>致谢：wdxtub<br>链接：<a href="http://wdxtub.com/csapp/thin-csapp-6/2016/04/16/" target="_blank" rel="noopener">http://wdxtub.com/csapp/thin-csapp-6/2016/04/16/</a></p>
+</div><div class="post-copyright"><blockquote><p>Ursprünglicher Autor: Bean</p><p>Ursprünglicher Link: <a href="http://yoursite.com/2020/02/22/【读薄 CSAPP】捌 网络编程/">http://yoursite.com/2020/02/22/【读薄 CSAPP】捌 网络编程/</a></p><p>Copyright-Erklärung: Bitte geben Sie die Quelle des Nachdrucks an.</p></blockquote></div><div class="tags"><a href="/tags/CSAPP/">CSAPP</a></div><div class="post-share"><div class="social-share"><span>Aktie:</span></div></div><div class="post-nav"><a href="/2020/02/22/【读薄 CSAPP】玖 并行与同步/" class="pre">【读薄 CSAPP】玖 并行与同步</a><a href="/2020/02/21/【读薄 CSAPP】柒 虚拟内存与动态内存分配/" class="next">【读薄 CSAPP】柒 虚拟内存与动态内存分配</a></div><div id="comments"></div></div></div></div><div class="layout-r"><div id="sidebar"><div class="search-pla"></div><div id="toc" class="widget"><div class="widget-title"><i class="fa fa-fei">Inhalte</i></div><ol class="toc"><li class="toc-item toc-level-1"><a class="toc-link" href="#【读薄-CSAPP】捌-网络编程"><span class="toc-text">【读薄 CSAPP】捌 网络编程</span></a><ol class="toc-child"><li class="toc-item toc-level-2"><a class="toc-link" href="#学习目标"><span class="toc-text">学习目标</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#网络架构"><span class="toc-text">网络架构</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#最底层-Ethernet-Segment"><span class="toc-text">最底层 - Ethernet Segment</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#下一层-Bridged-Ethernet-Segment"><span class="toc-text">下一层 - Bridged Ethernet Segment</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#下一层-internets"><span class="toc-text">下一层 - internets</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#网络协议"><span class="toc-text">网络协议</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#IP-地址"><span class="toc-text">IP 地址</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#Internet-域名"><span class="toc-text">Internet 域名</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#Internet-连接"><span class="toc-text">Internet 连接</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#Socket-接口"><span class="toc-text">Socket 接口</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#简单服务器实现"><span class="toc-text">简单服务器实现</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#架构总览"><span class="toc-text">架构总览</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#Client-open-clientfd"><span class="toc-text">Client open_clientfd</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#Server-open-listenfd"><span class="toc-text">Server open_listenfd</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#简单的-socket-服务器实例"><span class="toc-text">简单的 socket 服务器实例</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#客户端-Echo-Client"><span class="toc-text">客户端 Echo Client</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#服务器-Iterative-Echo-Server"><span class="toc-text">服务器 Iterative Echo Server</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#总结"><span class="toc-text">总结</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#参考资料"><span class="toc-text">参考资料</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#特别致谢"><span class="toc-text">特别致谢</span></a></li></ol></li></ol></div><div class="widget"><div class="widget-title"><i class="fa fa-xie"> Letzte</i></div><ul class="post-list"><li class="post-list-item"><a class="post-list-link" href="/2020/02/22/【读薄 CSAPP】玖 并行与同步/">【读薄 CSAPP】玖 并行与同步</a></li><li class="post-list-item"><a class="post-list-link" href="/2020/02/22/【读薄 CSAPP】捌 网络编程/">【读薄 CSAPP】捌 网络编程</a></li><li class="post-list-item"><a class="post-list-link" href="/2020/02/21/【读薄 CSAPP】柒 虚拟内存与动态内存分配/">【读薄 CSAPP】柒 虚拟内存与动态内存分配</a></li><li class="post-list-item"><a class="post-list-link" href="/2020/02/20/【读薄 CSAPP】陆 系统输入输出/">【读薄 CSAPP】陆 系统输入输出</a></li><li class="post-list-item"><a class="post-list-link" href="/2020/02/19/【读薄 CSAPP】伍 异常控制流/">【读薄 CSAPP】伍 异常控制流</a></li><li class="post-list-item"><a class="post-list-link" href="/2020/02/18/服务器+宝塔+Chevereto 搭建个人图床/">服务器+宝塔+Chevereto 搭建个人图床</a></li><li class="post-list-item"><a class="post-list-link" href="/2020/02/18/【读薄 CSAPP】肆 链接/">【读薄 CSAPP】肆 链接</a></li><li class="post-list-item"><a class="post-list-link" href="/2020/02/17/【读薄 CSAPP】叁 内存与缓存/">【读薄 CSAPP】叁 内存与缓存</a></li><li class="post-list-item"><a class="post-list-link" href="/2020/02/16/【读薄 CSAPP】贰 机器指令与程序优化/">【读薄 CSAPP】贰 机器指令与程序优化</a></li><li class="post-list-item"><a class="post-list-link" href="/2020/02/16/【读薄 CSAPP】壹 数据表示/">【读薄 CSAPP】壹 数据表示</a></li></ul></div><div class="widget"><div class="widget-title"><i class="fa fa-biao"> Tags</i></div><div class="tagcloud"><a href="/tags/Web/" style="font-size: 15px;">Web</a> <a href="/tags/物联网/" style="font-size: 15px;">物联网</a> <a href="/tags/计算机视觉及测距/" style="font-size: 15px;">计算机视觉及测距</a> <a href="/tags/ubuntu/" style="font-size: 15px;">ubuntu</a> <a href="/tags/opencv/" style="font-size: 15px;">opencv</a> <a href="/tags/数据库/" style="font-size: 15px;">数据库</a> <a href="/tags/CSAPP/" style="font-size: 15px;">CSAPP</a></div></div><div class="widget"><div class="widget-title"><i class="fa fa-archive"> Archiv</i></div><ul class="archive-list"><li class="archive-list-item"><a class="archive-list-link" href="/archives/2020/02/">February 2020</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2019/11/">November 2019</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2019/10/">October 2019</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2019/09/">September 2019</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2019/08/">August 2019</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2019/06/">June 2019</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2019/05/">May 2019</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2019/04/">April 2019</a></li></ul></div><div class="widget"><div class="widget-title"><i class="fa fa-you"> Blogroll</i></div><ul></ul><a href="https://blog.csdn.net/xbean1028/" title="CSDN" target="_blank">CSDN</a><ul></ul><a href="https://github.com/Xbean1028/" title="github" target="_blank">github</a></div></div></div></div><a id="totop" href="#top"></a><div id="footer"><div class="footer-info"><p><a href="/baidusitemap.xml">Sitemap</a> |  <a href="/atom.xml">Abonnieren Sie diese Site</a> |  <a href="/about/">Kontaktieren Sie den Blogger</a></p><p>本站总访问量：<i id="busuanzi_container_site_pv"><i id="busuanzi_value_site_pv"></i></i>次，本站总访客数:<i id="busuanzi_container_site_uv"><i id="busuanzi_value_site_uv"></i></i>人</p><p><span> Copyright &copy;<a href="/." rel="nofollow">Bean.</a></span><span> Theme by<a rel="nofollow" target="_blank" href="https://github.com/chaooo/hexo-theme-BlueLake"> BlueLake.</a></span><span> Count by<a href="http://busuanzi.ibruce.info/"> busuanzi.</a></span><span> Powered by<a rel="nofollow" target="_blank" href="https://hexo.io"> Hexo.</a></span></p></div></div></div><script src="https://busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js" async></script><script type="text/javascript" src="/js/search.json.js?v=2.0.4"></script><script type="text/javascript" src="/js/toctotop.js?v=2.0.4" async></script><link rel="stylesheet" type="text/css" href="/share/css/share.css"><script type="text/javascript" src="/share/js/social-share.js" charset="utf-8"></script><script type="text/javascript" src="/share/js/qrcode.js" charset="utf-8"></script></body></html>

@@ -1,0 +1,129 @@
+<!DOCTYPE html><html lang="null"><head><meta name="generator" content="Hexo 3.9.0"><meta http-equiv="content-type" content="text/html; charset=utf-8"><meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0" name="viewport"><meta content="yes" name="apple-mobile-web-app-capable"><meta content="black-translucent" name="apple-mobile-web-app-status-bar-style"><meta content="telephone=no" name="format-detection"><meta name="description" content="Bean's blog"><meta name="keywords" content="xbean1028,software"><link rel="stylesheet" type="text/css" href="//fonts.loli.net/css?family=Source+Code+Pro"><link rel="stylesheet" type="text/css" href="/css/style-dark.css?v=2.0.4"><link rel="stylesheet" type="text/css" href="/css/highlight-dark.css?v=2.0.4"><link rel="Shortcut Icon" href="/favicon.ico"><link rel="bookmark" href="/favicon.ico"><link rel="apple-touch-icon" href="/apple-touch-icon.png"><link rel="apple-touch-icon-precomposed" href="/apple-touch-icon.png"><title>【读薄 CSAPP】陆 系统输入输出 | Bean Panda</title></head><body><div class="body_container"><div id="header"><div class="site-name"><h1 class="hidden">【读薄 CSAPP】陆 系统输入输出</h1><a id="logo" href="/.">Bean Panda</a><p class="description">软件小白，江山点墨</p></div><div id="nav-menu"><a href="/." class="current"><i class="fa fa-home"> Start</i></a><a href="/archives/"><i class="fa fa-archive"> Archiv</i></a><a href="/about/"><i class="fa fa-user"> Über</i></a><a href="/atom.xml"><i class="fa fa-rss"> RSS</i></a></div><div id="search-form"><div id="result-mask" class="hide"></div><label><input id="search-key" type="text" autocomplete="off" placeholder="Suche"></label><div id="result-wrap" class="hide"><div id="search-result"></div></div><div class="hide"><template id="search-tpl"><div class="item"><a href="/{path}" title="{title}"><div class="title">{title}</div><div class="time">{date}</div><div class="tags">{tags}</div></a></div></template></div></div></div><div id="layout" class="layout-g"><div class="layout-l"><div class="content_container"><div class="post"><h1 class="post-title">【读薄 CSAPP】陆 系统输入输出</h1><div class="post-meta"><a href="/2020/02/20/【读薄 CSAPP】陆 系统输入输出/#comments" class="comment-count"></a><p><span class="date">Feb 20, 2020</span><span><i id="busuanzi_container_page_pv"><i id="busuanzi_value_page_pv"></i><i>Schlägt</i></i></span></p></div><div class="post-content"><h1 id="【读薄-CSAPP】陆-系统输入输出"><a href="#【读薄-CSAPP】陆-系统输入输出" class="headerlink" title="【读薄 CSAPP】陆 系统输入输出"></a>【读薄 CSAPP】陆 系统输入输出</h1><p>@[toc]</p>
+<h2 id="学习目标"><a href="#学习目标" class="headerlink" title="学习目标"></a>学习目标</h2><ol>
+<li>理解 Unix I/O 的设计与应用</li>
+<li>了解不同的文件类型</li>
+<li>理解文件描述符(file descriptor)及在读写中的应用</li>
+<li>了解元数据的相关概念及访问方法</li>
+<li>理解输入输出重定向的实现机制</li>
+<li>简单了解 C 标准库中的标准 I/O 函数</li>
+<li>知道如何根据不同场景选择对应的 I/O 方式</li>
+</ol>
+<h2 id="Unix-I-O"><a href="#Unix-I-O" class="headerlink" title="Unix I/O"></a>Unix I/O</h2><p>在 Linux 中，文件实际上可以看做是字节的序列。更有意思的是，所有的 I/O 设备也是用文件来表示的，比如：</p>
+<ul>
+<li><code>./dev/sda2</code> (<code>/usr</code> 磁盘分区)</li>
+<li><code>/dev/tty2</code> (终端)</li>
+</ul>
+<p>甚至连内核也是用文件来表示的：</p>
+<ul>
+<li><code>/boot/vmlinuz-3.13.0-55-generic</code> (内核镜像)</li>
+<li><code>/proc</code> (内核数据结构)</li>
+</ul>
+<p>因为 I/O 设备也是文件，所以内核可以利用称为 Unix I/O 的简单接口来处理输入输出，比如使用 <code>open()</code> 和 <code>close()</code> 来打开和关闭文件，使用 <code>read()</code> 和 <code>write()</code> 来读写文件，或者利用 <code>lseek()</code> 来设定读取的偏移量等等。</p>
+<p>为了区别不同文件的类型，会有一个 <code>type</code> 来进行区别：</p>
+<ul>
+<li>普通文件：包含任意数据</li>
+<li>目录：相关一组文件的索引</li>
+<li>套接字 Socket：和另一台机器上的进程通信的类型</li>
+</ul>
+<p>其实还有一些比较特别的类型，但是这里提一下，不深入了解：</p>
+<ul>
+<li>Named pipes(FIFOs)</li>
+<li>Symbolic links</li>
+<li>Character and block devices</li>
+</ul>
+<p><strong>普通文件</strong></p>
+<p>普通的文件包含任意数据，应用一般来说需要区分出文本文件和二进制文件。文本文件只包含 ASCII 或 Unicode 字符。除此之外的都是二进制文件(对象文件, JPEG 图片, 等等)。对于内核来说其实并不能区分出个中的区别。</p>
+<p>文本文件就是一系列的文本行，每行以 <code>\n</code> 结尾，新的一行是 <code>0xa</code>，和 ASCII 码中的 line feed 字符(LF) 一样。不同系统用用判断一行结束的符号不同(End of line, EOL)，如：</p>
+<ul>
+<li><p>Linux &amp; Mac OS:<code>\n</code>  (0xa)</p>
+<ul>
+<li>line feed(LF)</li>
+</ul>
+</li>
+<li><p>Windows &amp; 网络协议:<code>\r\n</code>  (0xd 0xa)</p>
+<ul>
+<li>Carriage return(CR) followed by line feed(LF)</li>
+</ul>
+</li>
+</ul>
+<p><strong>目录</strong></p>
+<p>目录包含一个链接(link)数组，并且每个目录至少包含两条记录：</p>
+<ul>
+<li><code>.</code>(dot) 当前目录</li>
+<li><code>..</code>(dot dot) 上一层目录</li>
+</ul>
+<p>用来操作目录的命令主要有 <code>mkdir</code>, <code>ls</code>, <code>rmdir</code>。目录是以树状结构组织的，根目录是 <code>/</code>(slash)。</p>
+<p>内核会为每个进程保存当前工作目录(cwd, current working directory)，可以用 <code>cd</code> 命令来进行更改。我们通过路径名来确定文件的位置，一般分为绝对路径和相对路径。</p>
+<p>接下来我们了解一下基本的文件操作。</p>
+<h3 id="打开文件"><a href="#打开文件" class="headerlink" title="打开文件"></a>打开文件</h3><p>在使用文件之前需要通知内核打开该文件：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">int fd; // 文件描述符 file descriptor</span><br><span class="line"></span><br><span class="line">if ((fd = open(&quot;/etc/hosts&quot;, O_RDONLY)) &lt; 0)</span><br><span class="line">&#123;</span><br><span class="line">    perror(&quot;open&quot;);</span><br><span class="line">    exit(1);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>返回值是一个小的整型称为文件描述符(file descriptor)，如果这个值等于 -1 则说明发生了错误。每个由 Linux shell(注：感谢网友 yybear 的勘误) 创建的进程都会默认打开三个文件（注意这里的文件概念）：</p>
+<ul>
+<li>0: standard input(stdin)</li>
+<li>1: standard output(stdout)</li>
+<li>2: standar error(stderr)</li>
+</ul>
+<h3 id="关闭文件"><a href="#关闭文件" class="headerlink" title="关闭文件"></a>关闭文件</h3><p>使用完毕之后同样需要通知内核关闭文件：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line">int fd;     // 文件描述符</span><br><span class="line">int retval; // 返回值</span><br><span class="line"></span><br><span class="line">int ((retval = close(fd)) &lt; 0)</span><br><span class="line">&#123;</span><br><span class="line">    perror(&quot;close&quot;);</span><br><span class="line">    exit(1);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>如果在此关闭已经关闭了的文件，会出大问题。所以一定要检查返回值，哪怕是 <code>close()</code> 函数（如上面的例子所示）</p>
+<h3 id="读取文件"><a href="#读取文件" class="headerlink" title="读取文件"></a>读取文件</h3><p>在打开和关闭之间就是读取文件，实际上就是把文件中对应的字节复制到内存中，并更新文件指针：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line">char buf[512];</span><br><span class="line">int fd;</span><br><span class="line">int nbytes;</span><br><span class="line"></span><br><span class="line">// 打开文件描述符，并从中读取 512 字节的数据</span><br><span class="line">if ((nbytes = read(fd, buf, sizeof(buf))) &lt; 0)</span><br><span class="line">&#123;</span><br><span class="line">    perror(&quot;read&quot;);</span><br><span class="line">    exit(1);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>返回值是读取的字节数量，是一个 <code>ssize_t</code> 类型（其实就是一个有符号整型），如果 <code>nbytes &lt; 0</code> 那么表示出错。<code>nbytes &lt; sizeof(buf)</code> 这种情况(short counts) 是可能发生的，而且并不是错误。</p>
+<h3 id="写入文件"><a href="#写入文件" class="headerlink" title="写入文件"></a>写入文件</h3><p>写入文件是把内存中的数据复制到文件中，并更新文件指针：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line">char buf[512];</span><br><span class="line">int fd;</span><br><span class="line">int nbytes;</span><br><span class="line"></span><br><span class="line">// 打开文件描述符，并向其写入 512 字节的数据</span><br><span class="line">if ((nbytes = write(fd, buf, sizeof(buf)) &lt; 0)</span><br><span class="line">&#123;</span><br><span class="line">    perror(&quot;write&quot;);</span><br><span class="line">    exit(1);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>返回值是写入的字节数量，如果 <code>nbytes &lt; 0</code> 那么表示出错。<code>nbytes &lt; sizeof(buf)</code> 这种情况(short counts) 是可能发生的，而且并不是错误。</p>
+<p>综合上面的操作，我们可以来看看 Unix I/O 的例子，这里我们一个字节一个字节把标准输入复制到标准输出中：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line">#include &quot;csapp.h&quot;</span><br><span class="line"></span><br><span class="line">int main(void)</span><br><span class="line">&#123;</span><br><span class="line">    char c;</span><br><span class="line">    while(Read(STDIN_FILENO, &amp;c, 1) != 0)</span><br><span class="line">        Write(STDOUT_FILENO, &amp;c, 1);</span><br><span class="line">    exit(0);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>前面提到的 short count 会在下面的情形下发生：</p>
+<ul>
+<li>在读取的时候遇到 EOF(end-of-file)</li>
+<li>从终端中读取文本行</li>
+<li>读取和写入网络 sockets</li>
+</ul>
+<p>但是在下面的情况下不会发生</p>
+<ul>
+<li>从磁盘文件中读取（除 EOF 外）</li>
+<li>写入到磁盘文件中</li>
+</ul>
+<p>最好总是允许 short count，这样就可以避免处理这么多不同的情况。</p>
+<h2 id="元数据"><a href="#元数据" class="headerlink" title="元数据"></a>元数据</h2><p>元数据是用来描述数据的数据，由内核维护，可以通过 <code>stat</code> 和 <code>fstat</code> 函数来访问，其结构是：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br></pre></td><td class="code"><pre><span class="line">struct stat</span><br><span class="line">&#123;</span><br><span class="line">    dev_t           st_dev;     // Device</span><br><span class="line">    ino_t           st_ino;     // inode</span><br><span class="line">    mode_t          st_mode;    // Protection &amp; file type</span><br><span class="line">    nlink_t         st_nlink;   // Number of hard links</span><br><span class="line">    uid_t           st_uid;     // User ID of owner</span><br><span class="line">    gid_t           st_gid;     // Group ID of owner</span><br><span class="line">    dev_t           st_rdev;    // Device type (if inode device)</span><br><span class="line">    off_t           st_size;    // Total size, in bytes</span><br><span class="line">    unsigned long   st_blksize; // Blocksize for filesystem I/O</span><br><span class="line">    unsigned long   st_blocks;  // Number of blocks allocated</span><br><span class="line">    time_t          st_atime;   // Time of last access</span><br><span class="line">    time_t          st_mtime;   // Time of last modification</span><br><span class="line">    time_t          st_ctime;   // Time of last change</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>对应的访问例子：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br></pre></td><td class="code"><pre><span class="line">int main (int argc, char **argv)</span><br><span class="line">&#123;</span><br><span class="line">    struct stat stat;</span><br><span class="line">    char *type, *readok;</span><br><span class="line">    </span><br><span class="line">    Stat(argv[1], &amp;stat);</span><br><span class="line">    if (S_ISREG(stat.st_mode)) // 确定文件类型</span><br><span class="line">        type = &quot;regular&quot;;</span><br><span class="line">    else if (S_ISDIR(stat.st_mode))</span><br><span class="line">        type = &quot;directory&quot;;</span><br><span class="line">    else</span><br><span class="line">        type = &quot;other&quot;;</span><br><span class="line">    </span><br><span class="line">    if ((stat.st_mode &amp; S_IRUSR)) // 检查读权限</span><br><span class="line">        readok = &quot;yes&quot;;</span><br><span class="line">    else</span><br><span class="line">        readok = &quot;no&quot;;</span><br><span class="line">    </span><br><span class="line">    printf(&quot;type: %s, read: %s\n&quot;, type, readok);</span><br><span class="line">    exit(0);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<h2 id="重定向"><a href="#重定向" class="headerlink" title="重定向"></a>重定向</h2><p>了解了具体的结构之后，我们来看看内核是如何表示已打开的文件的。其实过程很简单，每个进程都有自己的描述符表(Descriptor table)，然后 Descriptor 1 指向终端，Descriptor 4 指向磁盘文件，如下图所示：</p>
+<p><img src="https://imgconvert.csdnimg.cn/aHR0cHM6Ly93ZHh0dWIuY29tL2ltYWdlcy8xNDYxNDk2MzM2MDI4MC5qcGc?x-oss-process=image/format,png" alt="img"></p>
+<p>这里有一个需要说明的情况，就是使用 <code>fork</code>。子进程实际上是会继承父进程打开的文件的。在 fork 之后，子进程实际上和父进程的指向是一样的，这里需要注意的是会把引用计数加 1，如下图所示</p>
+<p><img src="https://imgconvert.csdnimg.cn/aHR0cHM6Ly93ZHh0dWIuY29tL2ltYWdlcy8xNDYxNDk2NjE3Mzg3OS5qcGc?x-oss-process=image/format,png" alt="img"></p>
+<p>了解了这个，我们我们就可以知道所谓的重定向是怎么实现的了。其实很简单，只要调用 <code>dup2(oldfd, newfd)</code> 函数即可。我们只要改变文件描述符指向的文件，也就完成了重定向的过程，下图中我们把原来指向终端的文件描述符指向了磁盘文件，也就把终端上的输出保存在了文件中：</p>
+<p><img src="https://imgconvert.csdnimg.cn/aHR0cHM6Ly93ZHh0dWIuY29tL2ltYWdlcy8xNDYxNDk2ODQ2MzY4Ny5qcGc?x-oss-process=image/format,png" alt="img"></p>
+<h2 id="标准输入输出"><a href="#标准输入输出" class="headerlink" title="标准输入输出"></a>标准输入输出</h2><p>C 标准库中包含一系列高层的标准 IO 函数，比如</p>
+<ul>
+<li>打开和关闭文件: <code>fopen</code>, <code>fclose</code></li>
+<li>读取和写入字节: <code>fread</code>, <code>fwrite</code></li>
+<li>读取和写入行: <code>fgets</code>, <code>fputs</code></li>
+<li>格式化读取和写入: <code>fscanf</code>, <code>fprintf</code></li>
+</ul>
+<p>标准 IO 会用流的形式打开文件，所谓流(stream)实际上是文件描述符和缓冲区(buffer)在内存中的抽象。C 程序一般以三个流开始，如下所示：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line">#include &lt;stdio.h&gt;</span><br><span class="line">extern FILE *stdin;     // 标准输入 descriptor 0</span><br><span class="line">extern FILE *stdout;    // 标准输出 descriptor 1</span><br><span class="line">extern FILE *stderr;    // 标准错误 descriptor 2</span><br><span class="line"></span><br><span class="line">int main()</span><br><span class="line">&#123;</span><br><span class="line">    fprintf(stdout, &quot;Hello, Da Wang\n&quot;);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>接下来我们详细了解一下为什么需要使用缓冲区，程序经常会一次读入或者写入一个字符，比如 <code>getc</code>, <code>putc</code>, <code>ungetc</code>，同时也会一次读入或者写入一行，比如 <code>gets</code>, <code>fgets</code>。如果用 Unix I/O 的方式来进行调用，是非常昂贵的，比如说 <code>read</code> 和 <code>write</code> 因为需要内核调用，需要大于 10000 个时钟周期。</p>
+<p>解决的办法就是利用 <code>read</code> 函数一次读取一块数据，然后再由高层的接口，一次从缓冲区读取一个字符（当缓冲区用完的时候需要重新填充）</p>
+<h2 id="总结"><a href="#总结" class="headerlink" title="总结"></a>总结</h2><p>前面介绍了两种 I/O 方法，Unix I/O 是最底层的，通过系统调用来进行文件操作，在这之上是 C 的标准 I/O 库，对应的函数为：</p>
+<ul>
+<li>Unix I/O: <code>open</code>, <code>read</code>, <code>write</code>, <code>lseek</code>, <code>stat</code>, <code>close</code></li>
+<li>Standard C I/O: <code>fopen</code>, <code>fdopen</code>, <code>fread</code>, <code>fwrite</code>, <code>fscanf</code>, <code>fprintf</code>, <code>sscanf</code>, <code>sprintf</code>, <code>fgets</code>, <code>fputs</code>, <code>fflush</code>, <code>fseek</code>, <code>fclose</code></li>
+</ul>
+<p>Unix I/O 是最通用最底层的 I/O 方法，其他的 I/O 包都是在 Unix I/O 的基础上进行构建的，值得注意的一点是，Unix I/O 中的方法都是异步信号安全(async-signal-safe)的，也就是说，可以在信号处理器中调用。因为比较底层和基础的缘故，需要处理的情况非常多，很容易出错。高效率的读写需要用到缓冲区，同样容易出错，这也就是标准 C 库着重要解决的问题。</p>
+<p>标准 C I/O 提供了带缓存访问文件的方法，使用的时候几乎不用考虑太多，但是如果我们想要得到文件的元信息时，就还是得使用 Unix I/O 中的 <code>stat</code> 函数。另外标准 C I/O 中的函数都不是异步信号安全(async-signal-safe)的，所以并不能在信号处理器中使用。最后，标准 C I/O 不适合用于处理网络套接字。</p>
+<h2 id="参考链接"><a href="#参考链接" class="headerlink" title="参考链接"></a>参考链接</h2><ul>
+<li><a href="http://www.ostera.io/tldr.jsx/#/?_k=tfdvsj" target="_blank" rel="noopener">查看命令用法</a></li>
+</ul>
+<h2 id="特别致谢"><a href="#特别致谢" class="headerlink" title="特别致谢"></a>特别致谢</h2><p>致谢：wdxtub<br>链接：<a href="http://wdxtub.com/csapp/thin-csapp-6/2016/04/16/" target="_blank" rel="noopener">http://wdxtub.com/csapp/thin-csapp-6/2016/04/16/</a></p>
+</div><div class="post-copyright"><blockquote><p>Ursprünglicher Autor: Bean</p><p>Ursprünglicher Link: <a href="http://yoursite.com/2020/02/20/【读薄 CSAPP】陆 系统输入输出/">http://yoursite.com/2020/02/20/【读薄 CSAPP】陆 系统输入输出/</a></p><p>Copyright-Erklärung: Bitte geben Sie die Quelle des Nachdrucks an.</p></blockquote></div><div class="tags"><a href="/tags/CSAPP/">CSAPP</a></div><div class="post-share"><div class="social-share"><span>Aktie:</span></div></div><div class="post-nav"><a href="/2020/02/21/【读薄 CSAPP】柒 虚拟内存与动态内存分配/" class="pre">【读薄 CSAPP】柒 虚拟内存与动态内存分配</a><a href="/2020/02/19/【读薄 CSAPP】伍 异常控制流/" class="next">【读薄 CSAPP】伍 异常控制流</a></div><div id="comments"></div></div></div></div><div class="layout-r"><div id="sidebar"><div class="search-pla"></div><div id="toc" class="widget"><div class="widget-title"><i class="fa fa-fei">Inhalte</i></div><ol class="toc"><li class="toc-item toc-level-1"><a class="toc-link" href="#【读薄-CSAPP】陆-系统输入输出"><span class="toc-text">【读薄 CSAPP】陆 系统输入输出</span></a><ol class="toc-child"><li class="toc-item toc-level-2"><a class="toc-link" href="#学习目标"><span class="toc-text">学习目标</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#Unix-I-O"><span class="toc-text">Unix I/O</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#打开文件"><span class="toc-text">打开文件</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#关闭文件"><span class="toc-text">关闭文件</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#读取文件"><span class="toc-text">读取文件</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#写入文件"><span class="toc-text">写入文件</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#元数据"><span class="toc-text">元数据</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#重定向"><span class="toc-text">重定向</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#标准输入输出"><span class="toc-text">标准输入输出</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#总结"><span class="toc-text">总结</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#参考链接"><span class="toc-text">参考链接</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#特别致谢"><span class="toc-text">特别致谢</span></a></li></ol></li></ol></div><div class="widget"><div class="widget-title"><i class="fa fa-xie"> Letzte</i></div><ul class="post-list"><li class="post-list-item"><a class="post-list-link" href="/2020/02/22/【读薄 CSAPP】玖 并行与同步/">【读薄 CSAPP】玖 并行与同步</a></li><li class="post-list-item"><a class="post-list-link" href="/2020/02/22/【读薄 CSAPP】捌 网络编程/">【读薄 CSAPP】捌 网络编程</a></li><li class="post-list-item"><a class="post-list-link" href="/2020/02/21/【读薄 CSAPP】柒 虚拟内存与动态内存分配/">【读薄 CSAPP】柒 虚拟内存与动态内存分配</a></li><li class="post-list-item"><a class="post-list-link" href="/2020/02/20/【读薄 CSAPP】陆 系统输入输出/">【读薄 CSAPP】陆 系统输入输出</a></li><li class="post-list-item"><a class="post-list-link" href="/2020/02/19/【读薄 CSAPP】伍 异常控制流/">【读薄 CSAPP】伍 异常控制流</a></li><li class="post-list-item"><a class="post-list-link" href="/2020/02/18/服务器+宝塔+Chevereto 搭建个人图床/">服务器+宝塔+Chevereto 搭建个人图床</a></li><li class="post-list-item"><a class="post-list-link" href="/2020/02/18/【读薄 CSAPP】肆 链接/">【读薄 CSAPP】肆 链接</a></li><li class="post-list-item"><a class="post-list-link" href="/2020/02/17/【读薄 CSAPP】叁 内存与缓存/">【读薄 CSAPP】叁 内存与缓存</a></li><li class="post-list-item"><a class="post-list-link" href="/2020/02/16/【读薄 CSAPP】贰 机器指令与程序优化/">【读薄 CSAPP】贰 机器指令与程序优化</a></li><li class="post-list-item"><a class="post-list-link" href="/2020/02/16/【读薄 CSAPP】壹 数据表示/">【读薄 CSAPP】壹 数据表示</a></li></ul></div><div class="widget"><div class="widget-title"><i class="fa fa-biao"> Tags</i></div><div class="tagcloud"><a href="/tags/Web/" style="font-size: 15px;">Web</a> <a href="/tags/物联网/" style="font-size: 15px;">物联网</a> <a href="/tags/计算机视觉及测距/" style="font-size: 15px;">计算机视觉及测距</a> <a href="/tags/ubuntu/" style="font-size: 15px;">ubuntu</a> <a href="/tags/opencv/" style="font-size: 15px;">opencv</a> <a href="/tags/数据库/" style="font-size: 15px;">数据库</a> <a href="/tags/CSAPP/" style="font-size: 15px;">CSAPP</a></div></div><div class="widget"><div class="widget-title"><i class="fa fa-archive"> Archiv</i></div><ul class="archive-list"><li class="archive-list-item"><a class="archive-list-link" href="/archives/2020/02/">February 2020</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2019/11/">November 2019</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2019/10/">October 2019</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2019/09/">September 2019</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2019/08/">August 2019</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2019/06/">June 2019</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2019/05/">May 2019</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2019/04/">April 2019</a></li></ul></div><div class="widget"><div class="widget-title"><i class="fa fa-you"> Blogroll</i></div><ul></ul><a href="https://blog.csdn.net/xbean1028/" title="CSDN" target="_blank">CSDN</a><ul></ul><a href="https://github.com/Xbean1028/" title="github" target="_blank">github</a></div></div></div></div><a id="totop" href="#top"></a><div id="footer"><div class="footer-info"><p><a href="/baidusitemap.xml">Sitemap</a> |  <a href="/atom.xml">Abonnieren Sie diese Site</a> |  <a href="/about/">Kontaktieren Sie den Blogger</a></p><p>本站总访问量：<i id="busuanzi_container_site_pv"><i id="busuanzi_value_site_pv"></i></i>次，本站总访客数:<i id="busuanzi_container_site_uv"><i id="busuanzi_value_site_uv"></i></i>人</p><p><span> Copyright &copy;<a href="/." rel="nofollow">Bean.</a></span><span> Theme by<a rel="nofollow" target="_blank" href="https://github.com/chaooo/hexo-theme-BlueLake"> BlueLake.</a></span><span> Count by<a href="http://busuanzi.ibruce.info/"> busuanzi.</a></span><span> Powered by<a rel="nofollow" target="_blank" href="https://hexo.io"> Hexo.</a></span></p></div></div></div><script src="https://busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js" async></script><script type="text/javascript" src="/js/search.json.js?v=2.0.4"></script><script type="text/javascript" src="/js/toctotop.js?v=2.0.4" async></script><link rel="stylesheet" type="text/css" href="/share/css/share.css"><script type="text/javascript" src="/share/js/social-share.js" charset="utf-8"></script><script type="text/javascript" src="/share/js/qrcode.js" charset="utf-8"></script></body></html>
